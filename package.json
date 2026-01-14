@@ -1,0 +1,23 @@
+{
+  "name": "dentistry-system",
+  "version": "1.0.0",
+  "description": "Реєстратура стоматології - цілісна система",
+  "scripts": {
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "restart": "docker-compose restart",
+    "logs": "docker-compose logs -f",
+    "backend:logs": "docker-compose logs -f backend",
+    "frontend:logs": "docker-compose logs -f frontend",
+    "backend:shell": "docker-compose exec backend python manage.py shell",
+    "backend:migrate": "docker-compose exec backend python manage.py migrate",
+    "backend:createsuperuser": "docker-compose exec backend python manage.py createsuperuser",
+    "backend:loaddata": "docker-compose exec backend python manage.py loaddata apps/appointments/fixtures/appointment_statuses.json",
+    "build": "docker-compose build",
+    "clean": "docker-compose down -v"
+  },
+  "keywords": ["dentistry", "appointment", "management"],
+  "author": "",
+  "license": "MIT"
+}
+

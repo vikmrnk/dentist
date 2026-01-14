@@ -1,0 +1,6 @@
+[
+  { "model": "appointments.appointmentstatus", "pk": 1, "fields": { "code": "planned", "name": "Запланований" } },
+  { "model": "appointments.appointmentstatus", "pk": 2, "fields": { "code": "completed", "name": "Завершений" } },
+  { "model": "appointments.appointmentstatus", "pk": 3, "fields": { "code": "cancelled", "name": "Скасований" } }
+]
+
