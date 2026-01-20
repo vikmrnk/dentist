@@ -1,15 +1,12 @@
-FROM node:18-alpine
+FROM node:18
 
 WORKDIR /app
 
 COPY package*.json ./
 COPY pnpm-lock.yaml* ./
 
-RUN if [ -f pnpm-lock.yaml ]; then \
-      npm install -g pnpm && pnpm install; \
-    else \
-      npm install; \
-    fi
+RUN rm -rf node_modules package-lock.json pnpm-lock.yaml && \
+    npm install
 
 COPY . .
 

@@ -56,7 +56,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-db_engine = os.getenv("DB_ENGINE", "mssql").lower()
+db_engine = os.getenv("DB_ENGINE", "sqlite").lower()  # Змінив дефолт на sqlite
 
 if db_engine == "sqlite":
     DATABASES = {

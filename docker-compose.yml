@@ -1,69 +1,84 @@
+version: "3.9"
+
 services:
-  # MSSQL Database (Azure SQL Edge для кросплатформної підтримки)
+  # =========================
+  # MSSQL Database
+  # =========================
   db:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: dentistry_db
-    restart: always
+    platform: linux/amd64
+    restart: unless-stopped
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "YourStrong@Passw0rd"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
     volumes:
       - mssql_data:/var/opt/mssql
-    healthcheck:
-      test: ["CMD-SHELL", "timeout 5 bash -c ':> /dev/tcp/127.0.0.1/1433' || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
 
+  # =========================
   # Django Backend
+  # =========================
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: dentistry_backend
-    restart: always
-    command: >
-      sh -c "python manage.py makemigrations --noinput &&
-             python manage.py migrate --noinput &&
-             (python manage.py loaddata apps/appointments/fixtures/appointment_statuses.json 2>/dev/null || true) &&
-             python manage.py runserver 0.0.0.0:8000"
+    restart: unless-stopped
     volumes:
       - ./backend:/app
     ports:
       - "8000:8000"
     environment:
-      - DJANGO_SECRET_KEY=django-insecure-dev-key-change-in-production
-      - DJANGO_DEBUG=True
-      - DB_NAME=dentistry
-      - DB_USER=sa
-      - DB_PASSWORD=YourStrong@Passw0rd
-      - DB_HOST=db
-      - DB_PORT=1433
-      - ALLOWED_HOSTS=localhost,127.0.0.1,backend
-      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-    depends_on:
-      db:
-        condition: service_healthy
+      DJANGO_SECRET_KEY: django-insecure-dev-key-change-in-production
+      DJANGO_DEBUG: "True"
 
+      DB_NAME: dentistry
+      DB_USER: sa
+      DB_PASSWORD: "YourStrong@Passw0rd"
+      DB_HOST: db
+      DB_PORT: 1433
+
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+
+    depends_on:
+      - db
+
+    # ❗ КРИТИЧНО:
+    # MSSQL на Windows може стартувати до 90 секунд.
+    # НЕ використовуємо healthcheck.
+    command: >
+      sh -c "
+      echo 'Waiting for MSSQL to be ready...' &&
+      sleep 60 &&
+      python manage.py migrate --noinput &&
+      python manage.py runserver 0.0.0.0:8000
+      "
+
+  # =========================
   # React Frontend
+  # =========================
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: dentistry_frontend
-    restart: always
+    restart: unless-stopped
     ports:
       - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+    # НЕ монтуємо ./frontend:/app, бо це перезаписує node_modules всередині контейнера
+    # Якщо потрібен hot-reload - запускай фронтенд локально (див. README.md)
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000/api
+      VITE_API_BASE_URL: http://localhost:8000/api
     depends_on:
       - backend
     command: npm run dev -- --host
 
+# =========================
+# Volumes
+# =========================
 volumes:
   mssql_data:
-

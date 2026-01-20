@@ -66,91 +66,68 @@ docker-compose build
 
 ---
 
-## 📋 Ручний запуск (без Docker, детально)
+## 📋 Ручний запуск (без Docker)
 
-> Якщо Docker недоступний (наприклад, Windows 32-bit), можна запустити локально. Рекомендація: для продакшена або демо замовнику з Windows 32-bit — використовуйте SQLite або віддалений MSSQL (Azure SQL/VM).
+> Рекомендація: користуйтеся Docker. Ручний запуск потрібен лише для локальної розробки без контейнерів.
 
-### Варіант A. Backend на SQLite (найпростіший, без окремої БД)
-1) Вимоги: Python 3.10+ (для Windows 32-bit — відповідний інсталятор).  
-2) Створіть віртуальне середовище і встановіть залежності:
-   ```bash
-   python -m venv venv
-   # Windows:
-   venv\Scripts\activate
-   # macOS/Linux:
-   source venv/bin/activate
-   pip install -r backend/requirements.txt
-   ```
-3) Налаштуйте env для SQLite:
-   ```bash
-   cp backend/env.example backend/.env
-   ```
-   У `backend/.env` встановіть:
-   ```
-   DB_ENGINE=sqlite
-   DB_NAME=db.sqlite3       # можна залишити так
-   DJANGO_DEBUG=True
-   ALLOWED_HOSTS=localhost,127.0.0.1
-   CORS_ORIGINS=http://localhost:5173
-   ```
-4) Ініціалізуйте БД:
-   ```bash
-   cd backend
-   python manage.py migrate
-   python manage.py loaddata apps/appointments/fixtures/appointment_statuses.json  # опційно
-   python manage.py create_test_data  # опційно, тестові записи
-   python manage.py createsuperuser   # опційно
-   ```
-5) Запуск:
-   ```bash
-   python manage.py runserver 0.0.0.0:8000
-   ```
+### 1. Backend (Django + MSSQL)
 
-### Варіант B. Backend з MSSQL без Docker
-- Локально на Windows 32-bit сучасний SQL Server не підтримується, тож використовуйте віддалений MSSQL (Azure SQL або SQL Server на сервері/VM).
-- У `backend/.env` задайте:
-  ```
-  DB_ENGINE=mssql
-  DB_NAME=...
-  DB_USER=...
-  DB_PASSWORD=...
-  DB_HOST=...
-  DB_PORT=1433
-  DB_DRIVER="ODBC Driver 18 for SQL Server"
-  DB_EXTRA_PARAMS=TrustServerCertificate=yes
-  ALLOWED_HOSTS=localhost,127.0.0.1
-  CORS_ORIGINS=http://localhost:5173
-  ```
-- Потрібно встановити Microsoft ODBC Driver 18 для SQL Server під вашу ОС.
-- Далі:
-  ```bash
-  cd backend
-  python manage.py migrate
-  python manage.py runserver 0.0.0.0:8000
-  ```
+1) Підніміть MSSQL локально (приклад через Docker):
+```bash
+docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=YourStrongPassword123!' -p 1433:1433 -d mcr.microsoft.com/azure-sql-edge:latest
+```
+⚠️ **Важливо:** Замініть `YourStrongPassword123!` на свій безпечний пароль!
 
-### Frontend (React + Vite)
-1) Встановіть Node.js (для Windows 32-bit — відповідний інсталятор; якщо LTS недоступний, Node 16+ має працювати).  
-2) У `frontend`:
-   ```bash
-   npm install
-   echo VITE_API_BASE_URL=http://localhost:8000/api > .env   # або URL вашого бекенду
-   npm run dev -- --host --port 5173
-   ```
-3) Відкрити: `http://localhost:5173`
+2) Налаштуйте середовище:
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-### Швидкий чекліст (локально без Docker)
-- Backend: активована venv, `backend/.env` із `DB_ENGINE=sqlite` (або MSSQL параметри, якщо віддалений сервер).  
-- Frontend: `frontend/.env` з `VITE_API_BASE_URL=<url>/api`.  
-- Запускати бекенд перед фронтендом.  
-- Для Windows 32-bit: використовуйте SQLite або віддалений MSSQL; локальний SQL Server x64/ARM образ не запуститься.
+3) Створіть `.env` файл:
+```bash
+cp env.example .env
+```
+Відредагуйте `backend/.env` та вкажіть свої значення (дивіться `backend/env.example` для прикладу).
 
-### Часті проблеми (локально)
-- **Немає залежностей**: переконайтеся, що venv активна і `pip install -r backend/requirements.txt` виконано.  
-- **SQLite міграції падають**: видаліть `backend/db.sqlite3` і повторіть `python manage.py migrate`.  
-- **MSSQL SSL/driver**: перевірте встановлення ODBC Driver 18, задайте `DB_EXTRA_PARAMS=TrustServerCertificate=yes`.  
-- **CORS у браузері**: перевірте `CORS_ORIGINS` і `ALLOWED_HOSTS` у `.env`.  
-- **Node не стає**: для старих Windows ставте 32-bit дистрибутив Node 16/18; якщо зовсім не ставиться, можна зібрати фронтенд на іншій машині і віддати статичні файли.
+⚠️ **Безпека:** Ніколи не комітьте `.env` файл у Git! Він вже доданий до `.gitignore`.
+
+4) Створіть базу даних (якщо потрібно):
+```bash
+# Підключіться до MSSQL та створіть базу
+docker exec -it <container_id> /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'YourStrongPassword123!' -Q "CREATE DATABASE dentistry"
+```
+
+5) Ініціалізуйте дані:
+```bash
+python manage.py migrate
+python manage.py loaddata apps/appointments/fixtures/appointment_statuses.json
+python manage.py create_test_data    # опційно, щоб мати тестові записи
+python manage.py createsuperuser     # опційно
+```
+
+6) Запуск:
+```bash
+python manage.py runserver
+```
+
+### 2. Frontend (React + Vite)
+
+```bash
+cd frontend
+npm install   # або pnpm install
+npm run dev   # або pnpm dev
+```
+
+Опційно створіть `.env` у `frontend/` (якщо потрібно змінити API URL):
+```env
+VITE_API_BASE_URL=http://localhost:8000/api
+```
+⚠️ **Безпека:** `.env` файли автоматично ігноруються Git.
+
+Frontend: **http://localhost:5173**
 
 ## Використання
 

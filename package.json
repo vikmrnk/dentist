@@ -4,6 +4,9 @@
   "description": "Реєстратура стоматології - цілісна система",
   "scripts": {
     "start": "docker-compose up -d",
+    "start:local": "./start-local.sh",
+    "start:backend": "./start-backend.sh",
+    "start:frontend": "./start-frontend.sh",
     "stop": "docker-compose down",
     "restart": "docker-compose restart",
     "logs": "docker-compose logs -f",
@@ -13,6 +16,9 @@
     "backend:migrate": "docker-compose exec backend python manage.py migrate",
     "backend:createsuperuser": "docker-compose exec backend python manage.py createsuperuser",
     "backend:loaddata": "docker-compose exec backend python manage.py loaddata apps/appointments/fixtures/appointment_statuses.json",
+    "local:migrate": "cd backend && source venv/bin/activate && export DB_ENGINE=sqlite && python manage.py migrate",
+    "local:loaddata": "cd backend && source venv/bin/activate && export DB_ENGINE=sqlite && python manage.py loaddata apps/appointments/fixtures/appointment_statuses.json",
+    "local:createsuperuser": "cd backend && source venv/bin/activate && export DB_ENGINE=sqlite && python manage.py createsuperuser",
     "build": "docker-compose build",
     "clean": "docker-compose down -v"
   },
